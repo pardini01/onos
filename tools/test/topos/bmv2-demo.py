@@ -12,7 +12,7 @@ SWITCH_BASE_LATITUDE = 25
 HOST_BASE_LATITUDE = 28
 BASE_SHIFT = 8
 VLAN_NONE = -1
-DEFAULT_SW_BW = 50
+DEFAULT_SW_BW = 20
 DEFAULT_HOST_BW = 25
 # Jumbo frame
 JUMBO_MTU=9000
@@ -37,7 +37,7 @@ from time import sleep
 from subprocess import call
 
 from mininet.cli import CLI
-from mininet.link import TCLink
+from mininet.link import TCLink, Intf
 from mininet.log import setLogLevel
 from mininet.net import Mininet
 from mininet.node import RemoteController, Host
@@ -265,6 +265,7 @@ def main(args):
     net = Mininet(topo=topo, build=False, controller=[controller])
 
     net.build()
+    collectorIntf = Intf( 'veth_1', node=net.nameToNode[ "s12" ] )
     net.start()
 
     print "Network started"
