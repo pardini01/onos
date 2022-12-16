@@ -56,9 +56,11 @@ class ClosTopo(Topo):
         Topo.__init__(self, **opts)
 
         bmv2SwitchIds = []
-        for row in (1, 2):
-            for col in range(1, args.size + 1):
-                bmv2SwitchIds.append("s%d%d" % (row, col))
+        # Spine
+        bmv2SwitchIds.append("s21")
+        for col in range(1, args.size + 1):
+            # Leaves
+            bmv2SwitchIds.append("s1%d" % col)
 
         bmv2Switches = {}
 
@@ -80,20 +82,9 @@ class ClosTopo(Topo):
                                                     pipeconf=args.pipeconf_id)
 
         for i in range(1, args.size + 1):
-            for j in range(1, args.size + 1):
-                if i == j:
-                    self.addLink(bmv2Switches["s1%d" % i],
-                                 bmv2Switches["s2%d" % j],
-                                 cls=TCLink, bw=DEFAULT_SW_BW)
-                    if args.with_imbalanced_striping:
-                        # 2 links
-                        self.addLink(bmv2Switches["s1%d" % i],
-                                     bmv2Switches["s2%d" % j],
-                                     cls=TCLink, bw=DEFAULT_SW_BW)
-                else:
-                    self.addLink(bmv2Switches["s1%d" % i],
-                                 bmv2Switches["s2%d" % j],
-                                 cls=TCLink, bw=DEFAULT_SW_BW)
+            self.addLink(bmv2Switches["s1%d" % i],
+                         bmv2Switches["s21"],
+                         cls=TCLink, bw=DEFAULT_SW_BW)
 
         for hostId in range(1, args.size + 1):
             host = self.addHost("h%d" % hostId,
@@ -319,10 +310,10 @@ if __name__ == '__main__':
                         type=str, action="store", required=False)
     parser.add_argument('--size', help='Number of leaf/spine switches',
                         type=int, action="store", required=False, default=2)
-    parser.add_argument('--with-imbalanced-striping',
-                        help='Topology with imbalanced striping',
-                        type=bool, action="store", required=False,
-                        default=False)
+    # parser.add_argument('--with-imbalanced-striping',
+    #                     help='Topology with imbalanced striping',
+    #                     type=bool, action="store", required=False,
+    #                     default=False)
     parser.add_argument('--pipeconf-id', help='Pipeconf ID for switches',
                         type=str, action="store", required=False, default='')
     parser.add_argument('--netcfg-sleep',
