@@ -56,11 +56,12 @@ class ClosTopo(Topo):
         Topo.__init__(self, **opts)
 
         bmv2SwitchIds = []
-        # Spine
-        bmv2SwitchIds.append("s21")
-        for col in range(1, args.size + 1):
+        # Spines
+        for spineId in range(1, args.spines + 1):
+            bmv2SwitchIds.append("s2%d" % spineId)
+        for leafId in range(1, args.leaves + 1):
             # Leaves
-            bmv2SwitchIds.append("s1%d" % col)
+            bmv2SwitchIds.append("s1%d" % leafId)
 
         bmv2Switches = {}
 
@@ -81,12 +82,13 @@ class ClosTopo(Topo):
                                                     latitude=latitude,
                                                     pipeconf=args.pipeconf_id)
 
-        for i in range(1, args.size + 1):
-            self.addLink(bmv2Switches["s1%d" % i],
-                         bmv2Switches["s21"],
-                         cls=TCLink, bw=DEFAULT_SW_BW)
+        for spineId in range(1, args.spines + 1):
+            for leafId in range(1, args.leaves + 1):
+                self.addLink(bmv2Switches["s1%d" % leafId],
+                             bmv2Switches["s2%d" % spineId],
+                             cls=TCLink, bw=DEFAULT_SW_BW)
 
-        for hostId in range(1, args.size + 1):
+        for hostId in range(1, args.leaves + 1):
             host = self.addHost("h%d" % hostId,
                                 cls=DemoHost,
                                 ip="10.0.0.%d/24" % hostId,
@@ -256,7 +258,9 @@ def main(args):
     net = Mininet(topo=topo, build=False, controller=[controller])
 
     net.build()
-    collectorIntf = Intf( 'veth_1', node=net.nameToNode[ "s12" ] )
+    # Add veth interface to the last switch which will be a server
+    # User must guarantee that the veth exists
+    collectorIntf = Intf( "veth_%d" % args.leaves, node=net.nameToNode[ "s1%d" % args.leaves ] )
     net.start()
 
     print "Network started"
@@ -273,12 +277,10 @@ def main(args):
     if args.pipeconf_id.endswith("int") or args.pipeconf_id.endswith("full"):
         setMTU(net, JUMBO_MTU)
 
-    for h in net.hosts:
-        h.startIperfServer()
-
-    print "Iperf servers started"
-
     if args.bg_traffic:
+        for h in net.hosts:
+            h.startIperfServer()
+        print "Iperf servers started"
         sleep(4)
         print "Starting iperf clients..."
         net.hosts[0].startIperfClient(net.hosts[-1], flowBw="400k",
@@ -308,8 +310,10 @@ if __name__ == '__main__':
         description='BMv2 mininet demo script (2-stage Clos topology)')
     parser.add_argument('--onos-ip', help='ONOS-BMv2 controller IP address',
                         type=str, action="store", required=False)
-    parser.add_argument('--size', help='Number of leaf/spine switches',
+    parser.add_argument('--leaves', help='Number of leaf switches',
                         type=int, action="store", required=False, default=2)
+    parser.add_argument('--spines', help='Number of spine switches',
+                        type=int, action="store", required=False, default=1)
     # parser.add_argument('--with-imbalanced-striping',
     #                     help='Topology with imbalanced striping',
     #                     type=bool, action="store", required=False,
